@@ -58,17 +58,25 @@ function stubReact() {
     // No-op setter: every assertion here reads the first render, and the
     // controlled-disclosure behaviour is the framework's, not ours.
     useState: (initial) => [typeof initial === "function" ? initial() : initial, () => {}],
-    memo: (component) => component,
+    // Real memo() returns an exotic object, not a function — that distinction
+    // matters here, because MarkdownText and DisclosureRow are both memoized
+    // and a function-only check would drop them.
+    memo: (component) => ({ $$typeof: Symbol.for("react.memo"), type: component, compare: null }),
     Component,
   };
 }
+
+const memoType = (type) =>
+  type !== null && typeof type === "object" && type.$$typeof === Symbol.for("react.memo") ? type.type : type;
 
 /** Evaluate a stubbed element tree, honouring class components and boundaries. */
 function renderTree(node, React) {
   if (Array.isArray(node)) return node.map((child) => renderTree(child, React));
   if (node === null || typeof node !== "object") return node;
-  const { type, props } = node;
+  const { props } = node;
+  const type = memoType(node.type);
   if (typeof type === "string") return { type, props: { ...props, children: renderTree(props.children, React) } };
+  if (typeof type === "object" && typeof type.render === "function") return renderTree(type.render(props), React);
   if (typeof type !== "function") return node;
   if (type.prototype instanceof React.Component) {
     const instance = new type(props);
@@ -122,18 +130,19 @@ function fakeCtx({ occupiedKeys = [] } = {}) {
 
 async function loadClient({ markdownThrows = false, withPrimitives = true, occupiedKeys = [] } = {}) {
   const React = stubReact();
-  const icon = (props) => React.createElement("icon", props);
-  const MarkdownText = (props) => {
+  const icon = React.memo((props) => React.createElement("icon", props));
+  const MarkdownText = React.memo((props) => {
     if (markdownThrows) throw new Error("markdown renderer exploded");
     return React.createElement("markdown", { text: props.text, labels: props.labels, streaming: props.streaming });
-  };
+  });
   // The real one is controlled and renders children only while open.
-  const DisclosureRow = (props) =>
+  const DisclosureRow = React.memo((props) =>
     React.createElement(
       "disclosure",
       { title: props.title, open: props.open, running: props.running, expandable: props.expandable, label: props.collapsedContent, icon: props.icon },
       props.open ? props.children : null,
-    );
+    ),
+  );
 
   const require = (specifier) => {
     if (specifier === "react") return React;
