@@ -13,12 +13,13 @@ The 4000-plugin DSH ecosystem has hundreds of "remaining quota" widgets, but not
   - `/cost full` — adds the per-turn timeline (wall / LLM ≈ / tools ≈ / tokens / est. cost per turn)
   - `/cost json` — machine-readable output for scripts and dashboards
 - **`cost_report`** tool — the model can pull the same report mid-session when you ask "how much have we spent so far?"
-- **`costProfiler` session projection** — the live aggregate behind both, also exposed on the client wire for future UI panels.
+- **`costProfiler` session projection** — the live aggregate behind both, also exposed on the client wire for dashboards.
+- **Rendered output** — both the command result and the tool card render the report as real Markdown (see [Rendering](#rendering)).
 
 ### Sample output
 
 ```
-### Session cost profile
+Session cost $0.04 (est) · 2 turns · 27.6k in · 2.7k out · 88.5% cache hit · 58s wall
 
 **Turns** 2 · **Messages** 2 · **Retries** 0
 **Wall** 58s · **LLM ≈** 36.16s · **Tools ≈** 3.84s
@@ -37,6 +38,28 @@ The 4000-plugin DSH ecosystem has hundreds of "remaining quota" widgets, but not
 | `bash` | 1 | 2.3s | 2.3s | 1 |
 | `read_file` | 1 | 1.54s | 1.54s | 0 |
 ```
+
+## Rendering
+
+The same report text is rendered as Markdown in the chat, so tables arrive as
+tables instead of as raw pipe characters:
+
+- The `/cost` result renders through the chat's Markdown renderer
+  (`conversation.chat.commandview`), and a `cost_report` call renders through the
+  tool-call slot (`tool.call.toolview`).
+- The row's collapsed label is the report's own first line, which is written as
+  plain prose (`Session cost $0.04 (est) · 2 turns · …`) so it reads correctly
+  even where Markdown is not rendered.
+- Reports of up to 30 lines open by default; longer ones (`/cost full` on a busy
+  session) start collapsed behind that label — click the row to expand.
+- `/cost json` renders as a JSON code block, with the code block's copy button.
+- If the client half is unavailable (or Markdown rendering fails), the card
+  degrades to the monospace text the host sent. The report itself is always
+  plain text end to end — the model always sees text, not markup.
+
+Upgrading from a build without the client half? The plugin composition cache
+holds a package's client declaration for the lifetime of the process, so the
+app needs a full restart (not just a page reload) before the slot entries load.
 
 ## Install
 
@@ -83,17 +106,18 @@ Set `showCosts: false` to omit costs entirely, or override prices per route in y
 - `LLM ≈` is derived from step timers, not per-request timings — treat it as an approximation.
 - The profile covers the current session (subagent sessions have their own); cross-session rollup is planned.
 - The `/cost` command reports text only; it does not enter model context. `/cost json` is the integration point for dashboards.
+- The card's labels are English in both locales: a slot entry has no locale seat of its own, and the report text is produced by the host half.
 
 ## Compatibility
 
 - DSH `0.2.0-rc.1` and later `0.2.0-rc.x` (peer range `^0.2.0-rc.1`), cordis `^4.0.1`, Node ≥ 20.
-- Pure host-side plugin — no client UI, no native modules, no build step.
+- The host half is plain ESM with no build step and no native modules. The client half is a hand-written classic script (no bundler) that registers two UI slots and degrades to plain text if the chat UI is absent.
 
 ## Development
 
 ```
 npm install      # (not required for tests)
-node --test      # 17 unit tests over the pure fold/report/prices layers
+node --test      # 31 unit tests over the fold/report/prices layers and the client half
 ```
 
 ## License

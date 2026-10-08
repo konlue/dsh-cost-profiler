@@ -13,4 +13,16 @@ Initial release.
 - `cost_report` model tool so the agent can pull the profile on request.
 - Built-in DeepSeek API list prices (peak/off-peak) with per-route overrides,
   custom currency, and `showCosts: false` opt-out.
-- Wire view (`costProfiler` projection key) for future client UI panels.
+- Wire view (`costProfiler` projection key) for dashboards.
+- Client half (`lib/client.js`, hand-written classic script, no build step):
+  renders the `/cost` result through the chat Markdown renderer
+  (`conversation.chat.commandview`, keys `cost` and `cost-report`) and the
+  `cost_report` result through the tool-call slot (`tool.call.toolview`, key
+  `cost_report`). Reports up to 30 lines open by default, longer ones collapse
+  behind their headline, `/cost json` becomes a JSON code block. Both cards
+  degrade to monospace text — with an inner error boundary, since a crashed
+  slot entry is retired rather than falling back to the generic card.
+- Report line 1 is now self-contained plain prose (`Session cost $0.04 (est) ·
+  2 turns · 27.6k in · 2.7k out · 88.5% cache hit · 58s wall`) instead of a
+  Markdown heading, so it reads correctly as a collapsed label and in the raw
+  fallback.
