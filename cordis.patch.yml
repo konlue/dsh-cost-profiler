@@ -1,0 +1,6 @@
+# dsh-cost-profiler bundle patch: mounts the plugin into the profile's
+# composition tree. The profile's package.json must list this package under
+# `dsh.profile.bundles` (the `dsh plugin add` flow does this automatically).
+- insert:
+    - id: cost-profiler
+      name: dsh-cost-profiler
