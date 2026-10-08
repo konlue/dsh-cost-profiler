@@ -12,6 +12,7 @@ import { resolvePrice, routeCost, normalizePrices } from "../lib/prices.js";
 
 const ev = (type, data, time) => ({ type, data, time });
 const fold = (events, opts) => events.reduce((state, e) => applyEvent(state, e, opts), null);
+const firstLine = (text) => text.split("\n", 1)[0];
 
 const FLASH = { provider: "deepseek", model: "deepseek-flash" };
 const PRO = { provider: "deepseek", model: "deepseek-v4-pro" };
@@ -207,12 +208,32 @@ test("formatters produce compact, human-readable values", () => {
 test("summary report contains totals, model table, tools and cost note", () => {
   const cfg = { showCosts: true, currency: "USD", offPeak: false, prices: {} };
   const text = renderReport(fold(twoTurnEvents()), cfg, "summary");
-  assert.match(text, /### Session cost profile/);
+  assert.match(text, /^Session cost \$0\.0047 \(est\) · 2 turns · 3k in · 800 out · 40% cache hit · 7\.4s wall$/m);
   assert.match(text, /\*\*Turns\*\* 2 · \*\*Messages\*\* 2/);
   assert.match(text, /\| `deepseek\/deepseek-flash` \|/);
   assert.match(text, /\| `read_file` \| 1 \| 1\.5s \| 1\.5s \| 0 \|/);
   assert.match(text, /Estimated cost\*\* \$0\.0047/);
   assert.match(text, /API list-price estimates/);
+});
+
+test("report line 1 is self-contained prose usable as a collapsed card label", () => {
+  const cfg = { showCosts: true, currency: "USD", offPeak: false, prices: {} };
+  const state = fold(twoTurnEvents());
+  for (const mode of ["summary", "full"]) {
+    const line = firstLine(renderReport(state, cfg, mode));
+    assert.match(line, /^Session cost \$0\.0047 \(est\) · 2 turns · 3k in · 800 out · 40% cache hit · 7\.4s wall$/);
+    assert.doesNotMatch(line, /[#|`]/);
+    assert.doesNotMatch(line, /\*\*/);
+  }
+
+  const noCost = firstLine(renderReport(state, { ...cfg, showCosts: false }, "summary"));
+  assert.match(noCost, /^Session cost: tracking off · 2 turns · /);
+  assert.doesNotMatch(noCost, /[#|`]/);
+
+  const empty = renderReport(null, cfg, "summary");
+  assert.equal(empty.split("\n").length, 1);
+  assert.match(empty, /^Session cost: nothing profiled in this session yet/);
+  assert.doesNotMatch(firstLine(empty), /[#|`]/);
 });
 
 test("summary hides cost columns when showCosts is false", () => {
@@ -257,11 +278,11 @@ test("full report adds the per-turn table; json report round-trips", () => {
 test("empty sessions render a friendly hint, not a broken table", () => {
   const cfg = { showCosts: true, currency: "USD", offPeak: false, prices: {} };
   const summary = renderReport(null, cfg, "summary");
-  assert.match(summary, /No profiled activity/);
+  assert.match(summary, /nothing profiled in this session yet/);
   const json = JSON.parse(renderReport(null, cfg, "json"));
   assert.equal(json.status, "empty");
   const emptyState = fold([ev("command/run", {}, 0)]);
-  assert.match(renderReport(emptyState, cfg, "summary"), /No profiled activity/);
+  assert.match(renderReport(emptyState, cfg, "summary"), /nothing profiled in this session yet/);
 });
 
 test("parseMode accepts the documented vocabulary", () => {
