@@ -87,6 +87,8 @@ Per-turn detail is capped (default 100 turns) while session totals always cover 
 
 Costs are computed from **API list prices** and marked as estimates — subscription/quota billing may differ. Built-in defaults cover DeepSeek's published models (peak and off-peak schedules; off-peak is half of peak). Models without a configured price show `—` instead of a wrong number.
 
+The report language is set by the `language` config key (`en` or `zh`, default `en`) — the host half cannot read the app's UI language, so unlike the card chrome the report body does not switch automatically. `/cost json` values stay English regardless, for script stability.
+
 Set `showCosts: false` to omit costs entirely, or override prices per route in your profile's `cordis.patch.yml`:
 
 ```yaml
@@ -97,6 +99,7 @@ Set `showCosts: false` to omit costs entirely, or override prices per route in y
     offPeak: false          # estimate with off-peak (half-peak) rates
     currency: USD           # display currency label
     detailTurns: 100        # per-turn detail kept for /cost full
+    language: en            # report language: en | zh (card chrome follows the app UI)
     prices:                 # currency per 1M tokens
       deepseek/deepseek-flash: { input: 0.3, cacheRead: 0.006, cacheWrite: 0, output: 1.2 }
       # bare-model or "default" keys also work as fallbacks
@@ -136,7 +139,7 @@ Notes:
 
 ```
 npm install      # (not required for tests)
-node --test      # 42 unit tests over the fold/report/prices/history layers and the client half
+node --test      # 44 unit tests over the fold/report/prices/history layers and the client half
 ```
 
 ## License

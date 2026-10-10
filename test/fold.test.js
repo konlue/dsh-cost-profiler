@@ -216,6 +216,28 @@ test("summary report contains totals, model table, tools and cost note", () => {
   assert.match(text, /API list-price estimates/);
 });
 
+test("language: zh renders the whole report body in Chinese", () => {
+  const cfg = { showCosts: true, currency: "USD", offPeak: false, prices: {}, language: "zh" };
+  const text = renderReport(fold(twoTurnEvents()), cfg, "summary");
+  assert.match(text, /^会话费用 \$0\.0047（估算） · 2 轮 · 输入 3k · 输出 800 · 缓存命中 40% · 墙钟 7\.4s$/m);
+  assert.match(text, /\*\*轮次\*\* 2 · \*\*消息\*\* 2 · \*\*重试\*\* 0/);
+  assert.match(text, /\| 模型路由 \|/);
+  assert.match(text, /\| 工具 \| 调用 \| 总耗时 \| 最长 \| 错误 \|/);
+  assert.match(text, /估算费用\*\* \$0\.0047 —— API 牌价（峰值），USD/);
+  assert.match(text, /费用为 API 牌价估算/);
+
+  const full = renderReport(fold(twoTurnEvents()), cfg, "full");
+  assert.match(full, /\*\*轮次\*\*（最近 2 \/ 2 轮）/);
+
+  const noCost = renderReport(fold(twoTurnEvents()), { ...cfg, showCosts: false }, "summary");
+  assert.match(noCost.split("\n", 1)[0], /^会话费用：统计已关闭 · 2 轮 · /);
+
+  const empty = renderReport(null, cfg, "summary");
+  assert.match(empty, /^会话费用：本会话还没有可统计的活动/);
+  assert.equal(empty.split("\n").length, 1);
+  assert.doesNotMatch(empty, /[#|`]/);
+});
+
 test("report line 1 is self-contained prose usable as a collapsed card label", () => {
   const cfg = { showCosts: true, currency: "USD", offPeak: false, prices: {} };
   const state = fold(twoTurnEvents());

@@ -239,8 +239,7 @@ test("aggregate totals, workspace rollup and the unpriced escape hatch", (t) => 
   assert.equal(agg.sessions[1].cost, null);
 });
 
-test("the sessions report renders a plain headline, tables and a json variant", (t) => {
-  const root = makeHome(t);
+test("the sessions report renders a plain headline, tables and a json variant", (t) => {  const root = makeHome(t);
   writeSession(root, {
     id: "session-aaa",
     header: defaultHeader("session-aaa", "D:\\work\\project-a"),
@@ -284,6 +283,43 @@ test("an empty window renders a friendly pointer instead of broken tables", () =
   assert.match(first, /^Sessions: nothing profiled last 7 days$/);
   assert.doesNotMatch(first, /[#|`]/);
   assert.match(text, /\/cost all/);
+});
+
+test("language: zh renders the sessions report in Chinese; json stays language-stable", (t) => {
+  const root = makeHome(t);
+  writeSession(root, {
+    id: "session-aaa",
+    header: defaultHeader("session-aaa", "D:\\work\\project-a"),
+    events: [],
+    projcache: projcacheRows(
+      {
+        title: { ver: 1, seq: 2, val: "修复登录 bug" },
+        sessionListMetadata: { ver: 1, seq: 3, val: { blank: false, lastPromptAt: NOW - DAY } },
+        costProfiler: { ver: 1, seq: 5, val: profilerState({ "deepseek/deepseek-flash": { input: 1_000_000, output: 100_000, cacheRead: 2_000_000, cacheWrite: 0, reasoning: 0, msgs: 3 } }, { turns: 3, msgs: 3, llmMs: 5000, toolMs: 500, wallMs: 9000 }) },
+      },
+      "D:\\work\\project-a",
+    ),
+  });
+  const collected = collectSessions({ root, now: NOW });
+  const zhCfg = { ...CFG, language: "zh" };
+
+  const text = renderSessionsReport(collected, zhCfg, "week", "summary");
+  assert.match(
+    text.split("\n", 1)[0],
+    /^会话汇总 \$0\.43（估算） · 1 个会话 · 3 轮 · 输入 1M · 输出 100k · 缓存命中 66\.7% · 近 7 天$/,
+  );
+  assert.match(text, /\| 工作区 \| 会话数 \|/);
+  assert.match(text, /\| 会话 \| 工作区 \| 最近活跃 \| 轮次 \|/);
+  assert.match(text, /仅标题与用量数字/);
+
+  // JSON output keeps English values so script consumers see a stable contract.
+  const json = JSON.parse(renderSessionsReport(collected, zhCfg, "week", "json"));
+  assert.equal(json.window, "last 7 days");
+  assert.equal(json.cost.estimate.toFixed(7), (0.432).toFixed(7));
+
+  const empty = renderSessionsReport({ records: [], errors: [] }, zhCfg, "week", "summary");
+  assert.match(empty.split("\n", 1)[0], /^会话汇总：近 7 天没有可统计的活动$/);
+  assert.match(empty, /\/cost all/);
 });
 
 test("parseMode accepts the scope+format vocabulary and stays backward compatible", () => {

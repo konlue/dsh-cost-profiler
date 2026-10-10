@@ -19,7 +19,10 @@ Initial release.
   content.
 - `cost_report` model tool so the agent can pull the profile on request.
 - Built-in DeepSeek API list prices (peak/off-peak) with per-route overrides,
-  custom currency, and `showCosts: false` opt-out.
+  custom currency, `showCosts: false` opt-out, and a `language` config key
+  (`en` | `zh`, default `en`) for the report body and command errors — the
+  host half cannot read the app's UI language, so the body is config-driven
+  while card chrome follows the app UI automatically.
 - Wire view (`costProfiler` projection key) for dashboards.
 - Client half (`lib/client.js`, hand-written classic script, no build step):
   renders the `/cost` result through the chat Markdown renderer

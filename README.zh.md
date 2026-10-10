@@ -77,6 +77,8 @@ dsh plugin --profile <profile> add dsh-cost-profiler
 
 费用按 **API 牌价**计算并标注为估算值 —— 订阅/配额计费可能不同。内置 DeepSeek 公开模型的默认价目（峰值与低谷时段；低谷为峰值一半）。未配置价格的模型显示 `—`，而不是给出错误数字。
 
+报告语言由 `language` 配置键控制（`en` 或 `zh`，默认 `en`）——宿主半边读不到应用界面语言，因此与卡片小文案不同，报告正文不会自动切换。`/cost json` 的字段值始终为英文，保证脚本解析稳定。
+
 设置 `showCosts: false` 可完全关闭费用列，或在 profile 的 `cordis.patch.yml` 中按路由覆盖价格：
 
 ```yaml
@@ -87,6 +89,7 @@ dsh plugin --profile <profile> add dsh-cost-profiler
     offPeak: false          # 用低谷价（峰值一半）估算
     currency: USD           # 费用显示币种
     detailTurns: 100        # /cost full 保留的逐 turn 明细条数
+    language: en            # 报告语言：en | zh（卡片小文案自动跟随应用界面语言）
     prices:                 # 每百万 token 的价格
       deepseek/deepseek-flash: { input: 0.3, cacheRead: 0.006, cacheWrite: 0, output: 1.2 }
       # 也支持裸模型名或 "default" 键作为兜底
@@ -125,7 +128,7 @@ dsh plugin --profile <profile> add dsh-cost-profiler
 ## 开发
 
 ```
-node --test      # 42 个单元测试：fold/report/prices/history 层 + 客户端半边
+node --test      # 44 个单元测试：fold/report/prices/history 层 + 客户端半边
 ```
 
 ## 许可证
