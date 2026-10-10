@@ -10,6 +10,13 @@ Initial release.
   whole-session totals, checkpoint-safe plain-JSON state.
 - `/cost [summary|full|json]` slash command (falls back to `/cost-report` on
   name collision).
+- Cross-session rollup: `/cost week|month|all [summary|json]` scans locally
+  stored sessions and answers "what did this week / this workspace cost across
+  all sessions" — per-workspace and per-session tables nothing in the built-in
+  panels provides. Data precedence: this plugin's own checkpoint (per-route),
+  the official `tokenUsage` checkpoint (priced via the last-used model), then
+  session-log replay. Read-only; titles and usage numbers only, never message
+  content.
 - `cost_report` model tool so the agent can pull the profile on request.
 - Built-in DeepSeek API list prices (peak/off-peak) with per-route overrides,
   custom currency, and `showCosts: false` opt-out.

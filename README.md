@@ -12,9 +12,11 @@ The 4000-plugin DSH ecosystem has hundreds of "remaining quota" widgets, but not
   - `/cost` / `/cost summary` — totals, per-model breakdown, slowest tools
   - `/cost full` — adds the per-turn timeline (wall / LLM ≈ / tools ≈ / tokens / est. cost per turn)
   - `/cost json` — machine-readable output for scripts and dashboards
-- **`cost_report`** tool — the model can pull the same report mid-session when you ask "how much have we spent so far?"
+- **Cross-session rollup** — the built-in panels are strictly per-session; this is the only place that answers "what did this week / this workspace cost me across all sessions":
+  - `/cost week` / `/cost month` / `/cost all` — per-workspace and per-session tables with tokens and estimated cost (append `json` for machine output)
+- **`cost_report`** tool — the model can pull the same session report mid-session when you ask "how much have we spent so far?"
 - **`costProfiler` session projection** — the live aggregate behind both, also exposed on the client wire for dashboards.
-- **Rendered output** — both the command result and the tool card render the report as real Markdown (see [Rendering](#rendering)).
+- **Rendered output** — command results and tool cards render as real Markdown (see [Rendering](#rendering)).
 
 ### Sample output
 
@@ -101,10 +103,27 @@ Set `showCosts: false` to omit costs entirely, or override prices per route in y
       default: { input: 1, output: 2 }
 ```
 
+## Cross-session rollup
+
+`/cost week` (also `month`, `all`) reads **locally stored sessions** and rolls them up — per-workspace totals plus a per-session table sorted by estimated cost. Nothing like this exists in the built-in panels, which are strictly per-session.
+
+Where the data comes from, in order of preference:
+
+1. this plugin's own checkpoint for that session (per-model-route buckets — priced most accurately);
+2. the app's official `tokenUsage` checkpoint (session totals without routes — priced via the session's last-used model, or your `default` price);
+3. replaying the session log directly (no checkpoint needed).
+
+Notes:
+
+- **Read-only and privacy-bounded**: the scan reads `~/.dsh` (`$DSH_HOME` respected), touches only titles, timestamps and usage/timing numbers — never message content — and writes nothing.
+- The current session's last events may lag by one checkpoint flush (typically seconds).
+- Sessions with no profiled activity are skipped; a window with nothing in it renders a pointer to `/cost all` rather than an empty table.
+- The `cost_report` model tool deliberately stays session-scoped — cross-session tables would bloat model context.
+
 ## Notes & limitations
 
 - `LLM ≈` is derived from step timers, not per-request timings — treat it as an approximation.
-- The profile covers the current session (subagent sessions have their own); cross-session rollup is planned.
+- The in-session profile covers the current session (subagent sessions have their own); cross-session rollup is its own feature (see above).
 - The `/cost` command reports text only; it does not enter model context. `/cost json` is the integration point for dashboards.
 - The card's labels are English in both locales: a slot entry has no locale seat of its own, and the report text is produced by the host half.
 
@@ -117,7 +136,7 @@ Set `showCosts: false` to omit costs entirely, or override prices per route in y
 
 ```
 npm install      # (not required for tests)
-node --test      # 31 unit tests over the fold/report/prices layers and the client half
+node --test      # 41 unit tests over the fold/report/prices/history layers and the client half
 ```
 
 ## License

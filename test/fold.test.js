@@ -286,10 +286,10 @@ test("empty sessions render a friendly hint, not a broken table", () => {
 });
 
 test("parseMode accepts the documented vocabulary", () => {
-  assert.equal(parseMode(""), "summary");
-  assert.equal(parseMode("  "), "summary");
-  assert.equal(parseMode("full"), "full");
-  assert.equal(parseMode(" JSON "), "json");
+  assert.deepEqual(parseMode(""), { scope: null, format: "summary" });
+  assert.deepEqual(parseMode("  "), { scope: null, format: "summary" });
+  assert.deepEqual(parseMode("full"), { scope: null, format: "full" });
+  assert.deepEqual(parseMode(" JSON "), { scope: null, format: "json" });
   assert.equal(parseMode("verbose"), null);
   assert.match(USAGE, /\/cost/);
 });
