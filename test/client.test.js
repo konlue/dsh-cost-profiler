@@ -58,6 +58,7 @@ function stubReact() {
     // No-op setter: every assertion here reads the first render, and the
     // controlled-disclosure behaviour is the framework's, not ours.
     useState: (initial) => [typeof initial === "function" ? initial() : initial, () => {}],
+    useMemo: (factory) => factory(),
     // Real memo() returns an exotic object, not a function — that distinction
     // matters here, because MarkdownText and DisclosureRow are both memoized
     // and a function-only check would drop them.
@@ -107,7 +108,17 @@ function findOne(node, type) {
 
 /** Mirrors SlotCore: an occupied key at the same priority throws. */
 function fakeCtx({ occupiedKeys = [] } = {}) {
-  const ctx = { registered: [], injected: [], effects: [], live: 0 };
+  const ctx = { registered: [], injected: [], effects: [], live: 0, dictionaries: {} };
+  ctx.locale = {
+    register(name, dicts) {
+      ctx.dictionaries[name] = dicts;
+      return () => {};
+    },
+  };
+  ctx.effect = (callback, _reason) => {
+    callback();
+    return () => {};
+  };
   ctx.slots = {
     inject(name, callback) {
       ctx.injected.push(name);
@@ -164,11 +175,17 @@ async function loadClient({ markdownThrows = false, withPrimitives = true, occup
     if (entry === undefined) throw new Error(`no slot entry registered for "${key}"`);
     return entry.component;
   };
+  // The framework resolves `t` from the registered dictionary by app language.
+  const makeT = (lang) => {
+    const dict = ctx.dictionaries["cost-profiler"]?.[lang];
+    return (key) => dict?.[key] ?? key;
+  };
   return {
     id: registration.id,
     plugin,
     ctx,
     componentFor,
+    makeT,
     render: (element) => renderTree(element, React),
   };
 }
@@ -176,17 +193,19 @@ async function loadClient({ markdownThrows = false, withPrimitives = true, occup
 test("registers the report card on both slots under the names the host dispatches", async () => {
   const { plugin, ctx, id } = await loadClient();
   assert.equal(typeof plugin.apply, "function");
-  assert.deepEqual(plugin.inject, ["slots"]);
+  assert.deepEqual(plugin.inject, ["slots", "locale"]);
   assert.equal(id, "dsh-cost-profiler");
 
   assert.deepEqual(
-    ctx.registered.map((entry) => [entry.options.name, entry.options.key]),
+    ctx.registered.map((entry) => [entry.options.name, entry.options.key, entry.options.locale]),
     [
-      ["conversation.chat.commandview", "cost"],
-      ["conversation.chat.commandview", "cost-report"],
-      ["tool.call.toolview", "cost_report"],
+      ["conversation.chat.commandview", "cost", "cost-profiler"],
+      ["conversation.chat.commandview", "cost-report", "cost-profiler"],
+      ["tool.call.toolview", "cost_report", "cost-profiler"],
     ],
   );
+  // Both dictionaries registered so the seat resolves either app language.
+  assert.deepEqual(Object.keys(ctx.dictionaries["cost-profiler"]).sort(), ["en", "zh"]);
   assert.deepEqual(ctx.injected, ["conversation.chat.commandview", "tool.call.toolview"]);
   // The framework calls every returned effect as a disposer, so a skipped
   // registration must not leave a null behind in the array.
@@ -287,18 +306,40 @@ test("running and failed /cost render without a body", async () => {
   assert.equal(failed.props.label.props.style.color, "#d64545");
 });
 
-test("markdown labels are complete and reference-stable", async () => {
+test("markdown labels are complete; the EN fallback covers a missing locale seat", async () => {
   const { componentFor, render } = await loadClient();
   const card = componentFor("cost");
   const node = { kind: "command", name: "cost", args: null, outcome: { kind: "success", text: SHORT_REPORT } };
-  const first = findOne(render(card({ node })), "markdown").props.labels;
-  const second = findOne(render(card({ node })), "markdown").props.labels;
+  const labels = findOne(render(card({ node })), "markdown").props.labels;
 
-  assert.equal(first, second);
-  assert.deepEqual(Object.keys(first).sort(), ["code", "footnotes"]);
-  assert.deepEqual(Object.keys(first.code).sort(), ["copiedLabel", "copyLabel", "toolbarLabels"]);
-  assert.deepEqual(Object.keys(first.code.toolbarLabels).sort(), ["codeLabel", "unwrapLabel", "wrapLabel"]);
-  assert.equal(typeof first.footnotes, "string");
+  assert.deepEqual(Object.keys(labels).sort(), ["code", "footnotes"]);
+  assert.deepEqual(Object.keys(labels.code).sort(), ["copiedLabel", "copyLabel", "toolbarLabels"]);
+  assert.deepEqual(Object.keys(labels.code.toolbarLabels).sort(), ["codeLabel", "unwrapLabel", "wrapLabel"]);
+  // No `t` prop (framework fell back or seat missing) must still yield labels,
+  // from the built-in English dictionary — never undefined into MarkdownText.
+  assert.equal(labels.code.copyLabel, "Copy");
+  assert.equal(labels.footnotes, "Footnotes");
+});
+
+test("card chrome renders in the app's language through the locale seat", async () => {
+  const { componentFor, makeT, render } = await loadClient();
+  const card = componentFor("cost");
+
+  const zh = makeT("zh");
+  const running = findOne(render(card({ node: { kind: "command", name: "cost", args: null, outcome: null }, t: zh })), "disclosure");
+  assert.equal(running.props.label.props.children, "运行中…");
+
+  const jsonText = '{\n  "totals": {}\n}';
+  const jsonCard = render(card({ node: { kind: "command", name: "cost", args: " json ", outcome: { kind: "success", text: jsonText } }, t: zh }));
+  assert.match(findOne(jsonCard, "disclosure").props.label.props.children, /^JSON 报告 · \d+ 行$/);
+  assert.equal(findOne(jsonCard, "markdown").props.labels.code.copyLabel, "复制");
+  assert.equal(findOne(jsonCard, "markdown").props.labels.code.toolbarLabels.wrapLabel, "自动换行");
+
+  const failed = findOne(
+    render(card({ node: { kind: "command", name: "cost", args: "verbose", outcome: { kind: "error", text: "" } }, t: zh })),
+    "disclosure",
+  );
+  assert.match(failed.props.label.props.children, /命令执行失败。/);
 });
 
 test("a settled cost_report tool call renders its content as Markdown", async () => {

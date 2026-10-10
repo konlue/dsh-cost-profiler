@@ -115,7 +115,7 @@ dsh plugin --profile <profile> add dsh-cost-profiler
 - `LLM ≈` 由 step 计时推导，非逐请求精确计时 —— 视为近似值即可。
 - 会话内剖析范围为当前会话（子代理会话各自独立）；跨会话汇总见上文。
 - `/cost` 命令只输出文本，不进入模型上下文；`/cost json` 是面板类集成的接入点。
-- 卡片的标签文案只有英文（不随界面语言切换）：槽条目本身没有 locale 席位，且报告文本由宿主半边生成。
+- 卡片小文案（运行态/JSON 标签/错误提示/代码块按钮）通过应用的 locale 注册表跟随界面语言（中/英）；报告正文由宿主半边生成，为英文。
 
 ## 兼容性
 
@@ -125,7 +125,7 @@ dsh plugin --profile <profile> add dsh-cost-profiler
 ## 开发
 
 ```
-node --test      # 41 个单元测试：fold/report/prices/history 层 + 客户端半边
+node --test      # 42 个单元测试：fold/report/prices/history 层 + 客户端半边
 ```
 
 ## 许可证

@@ -28,7 +28,10 @@ Initial release.
   `cost_report`). Reports up to 30 lines open by default, longer ones collapse
   behind their headline, `/cost json` becomes a JSON code block. Both cards
   degrade to monospace text — with an inner error boundary, since a crashed
-  slot entry is retired rather than falling back to the generic card.
+  slot entry is retired rather than falling back to the generic card. Card
+  chrome (running/JSON/error labels, code-block buttons) is bilingual through
+  the app's locale registry (`cost-profiler` namespace, English/Chinese) and
+  follows the app UI language; the report body stays host-generated English.
 - Report line 1 is now self-contained plain prose (`Session cost $0.04 (est) ·
   2 turns · 27.6k in · 2.7k out · 88.5% cache hit · 58s wall`) instead of a
   Markdown heading, so it reads correctly as a collapsed label and in the raw

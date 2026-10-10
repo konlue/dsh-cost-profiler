@@ -125,7 +125,7 @@ Notes:
 - `LLM ≈` is derived from step timers, not per-request timings — treat it as an approximation.
 - The in-session profile covers the current session (subagent sessions have their own); cross-session rollup is its own feature (see above).
 - The `/cost` command reports text only; it does not enter model context. `/cost json` is the integration point for dashboards.
-- The card's labels are English in both locales: a slot entry has no locale seat of its own, and the report text is produced by the host half.
+- Card chrome (running/JSON/error labels, code-block buttons) follows the app's UI language (English/Chinese) through the app's locale registry; the report body itself is host-generated English.
 
 ## Compatibility
 
@@ -136,7 +136,7 @@ Notes:
 
 ```
 npm install      # (not required for tests)
-node --test      # 41 unit tests over the fold/report/prices/history layers and the client half
+node --test      # 42 unit tests over the fold/report/prices/history layers and the client half
 ```
 
 ## License
