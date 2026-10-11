@@ -1,5 +1,7 @@
 # dsh-cost-profiler
 
+[![npm](https://img.shields.io/npm/v/dsh-cost-profiler)](https://www.npmjs.com/package/dsh-cost-profiler)
+
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 turn 级成本/性能剖析器 —— 做归因分析，而不只是余额显示。
 
 DSH 插件生态里有几百个"剩余额度"组件，但没有一个能回答：一个会话的 token、时间、费用到底花在了哪里。本插件把会话自身的事件流折叠成按 turn、按模型、按工具的剖析报告，按需渲染 —— **零额外 LLM 调用、零额外存储**。

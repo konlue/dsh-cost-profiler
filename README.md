@@ -1,5 +1,7 @@
 # dsh-cost-profiler
 
+[![npm](https://img.shields.io/npm/v/dsh-cost-profiler)](https://www.npmjs.com/package/dsh-cost-profiler)
+
 Turn-level cost & performance profiler for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) — attribution, not just a balance display.
 
 The 4000-plugin DSH ecosystem has hundreds of "remaining quota" widgets, but nothing that answers *where* a session's tokens, seconds and cents actually went. This plugin folds the session's own event stream into a per-turn, per-model, per-tool profile and renders it on demand — **zero extra LLM calls, zero extra storage**.

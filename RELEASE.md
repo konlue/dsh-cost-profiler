@@ -17,7 +17,11 @@ commands run from the repository root unless noted.
 > publish/whoami/view command below must carry
 > `--registry https://registry.npmjs.org`.
 
-## 1. npm
+## 1. npm — ✅ done: 0.1.0 is live
+
+`dsh-cost-profiler@0.1.0` was published on 2026-10-11 (latest tag; shasum
+`c2415856…` matches the local dry run). The instructions below remain for
+future versions.
 
 Publishing to npmjs.com requires either 2FA or a granular access token.
 
@@ -52,6 +56,14 @@ Publishing to npmjs.com requires either 2FA or a granular access token.
 ```
 npm view dsh-cost-profiler version --registry https://registry.npmjs.org
 # → 0.1.0
+```
+
+**Cleanup** — the placeholder `0.0.0-stage` published during setup can be
+removed (single-version unpublish is allowed within 72h of publishing and
+does not touch 0.1.0):
+
+```
+npm unpublish dsh-cost-profiler@0.0.0-stage --registry https://registry.npmjs.org
 ```
 
 ## 2. GitHub
