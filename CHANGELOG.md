@@ -34,8 +34,8 @@ Initial release.
   slot entry is retired rather than falling back to the generic card. Card
   chrome (running/JSON/error labels, code-block buttons) is bilingual through
   the app's locale registry (`cost-profiler` namespace, English/Chinese) and
-  follows the app UI language; the report body stays host-generated English.
-- Report line 1 is now self-contained plain prose (`Session cost $0.04 (est) ·
-  2 turns · 27.6k in · 2.7k out · 88.5% cache hit · 58s wall`) instead of a
+  follows the app UI language.
+- Report line 1 is self-contained plain prose (`Session cost $0.04 (est) ·
+  2 turns · 27.6k in · 2.7k out · 88.5% cache hit · 58s wall`) rather than a
   Markdown heading, so it reads correctly as a collapsed label and in the raw
   fallback.
