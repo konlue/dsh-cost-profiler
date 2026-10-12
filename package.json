@@ -3,6 +3,14 @@
   "description": "Turn-level cost & performance profiler for the DeepSeek Harness: per-turn token/latency/cost attribution, slow-tool ranking, and a /cost session report",
   "version": "0.1.0",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/konlue/dsh-cost-profiler.git"
+  },
+  "bugs": {
+    "url": "https://github.com/konlue/dsh-cost-profiler/issues"
+  },
+  "homepage": "https://github.com/konlue/dsh-cost-profiler#readme",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
