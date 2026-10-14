@@ -88,7 +88,7 @@ dsh plugin --profile <profile> add dsh-cost-profiler
   name: dsh-cost-profiler
   config:
     showCosts: true
-    offPeak: false          # 用低谷价（峰值一半）估算
+    offPeak: false          # 设为 true 时用低谷价（峰值一半）估算
     currency: USD           # 费用显示币种
     detailTurns: 100        # /cost full 保留的逐 turn 明细条数
     language: en            # 报告语言：en | zh（卡片小文案自动跟随应用界面语言）
