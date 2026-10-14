@@ -98,7 +98,7 @@ Set `showCosts: false` to omit costs entirely, or override prices per route in y
   name: dsh-cost-profiler
   config:
     showCosts: true
-    offPeak: false          # estimate with off-peak (half-peak) rates
+    offPeak: false          # set true to estimate with off-peak (half-peak) rates
     currency: USD           # display currency label
     detailTurns: 100        # per-turn detail kept for /cost full
     language: en            # report language: en | zh (card chrome follows the app UI)
