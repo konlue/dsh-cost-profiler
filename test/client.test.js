@@ -106,6 +106,15 @@ function findOne(node, type) {
   return findOne(node.props.children, type);
 }
 
+/** The collapsed label is [separator dot, text span] inside a wrapper. */
+function labelText(row) {
+  return row.props.label.props.children[1].props.children;
+}
+
+function labelStyle(row) {
+  return row.props.label.props.children[1].props.style;
+}
+
 /** Mirrors SlotCore: an occupied key at the same priority throws. */
 function fakeCtx({ occupiedKeys = [] } = {}) {
   const ctx = { registered: [], injected: [], effects: [], live: 0, dictionaries: {} };
@@ -190,6 +199,14 @@ async function loadClient({ markdownThrows = false, withPrimitives = true, occup
   };
 }
 
+test("card styling references theme tokens only — no hardcoded colors", async () => {
+  const source = await readFile(new URL("../lib/client.js", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /#[0-9a-fA-F]{6}\b/);
+  assert.match(source, /--dsw-alias-state-error-primary/);
+  assert.match(source, /--dsw-alias-markdown-code-block/);
+  assert.match(source, /--dsw-alias-label-caption/);
+});
+
 test("registers the report card on both slots under the names the host dispatches", async () => {
   const { plugin, ctx, id } = await loadClient();
   assert.equal(typeof plugin.apply, "function");
@@ -258,7 +275,15 @@ test("a short /cost report opens itself and renders as Markdown", async () => {
   assert.equal(row.props.title, "cost");
   assert.equal(row.props.expandable, true);
   assert.equal(row.props.open, true);
-  assert.equal(row.props.label.props.children, SHORT_REPORT);
+  assert.equal(labelText(row), SHORT_REPORT);
+  // Native separator dot precedes the summary text.
+  assert.equal(row.props.label.props.children[0].props.style.background, "var(--dsw-alias-label-caption)");
+
+  // The body renders inside the native-style card (border + radius + code-block bg).
+  const cardDiv = findOne(tree, "div");
+  assert.equal(cardDiv.props.style.background, "var(--dsw-alias-markdown-code-block)");
+  assert.equal(cardDiv.props.style.border, "0.5px solid var(--dsw-alias-border-l1)");
+  assert.equal(cardDiv.props.style.borderRadius, "var(--dsw-radius-lg)");
 
   const markdown = findOne(tree, "markdown");
   assert.equal(markdown.props.text, SHORT_REPORT);
@@ -272,7 +297,7 @@ test("a long /cost full report starts collapsed behind its headline", async () =
 
   const row = findOne(tree, "disclosure");
   assert.equal(row.props.open, false);
-  assert.equal(row.props.label.props.children, REPORT.split("\n")[0]);
+  assert.equal(labelText(row), REPORT.split("\n")[0]);
   assert.equal(findOne(tree, "markdown"), null);
 });
 
@@ -283,7 +308,7 @@ test("/cost json renders as a JSON code block rather than collapsed prose", asyn
 
   const row = findOne(tree, "disclosure");
   assert.equal(row.props.open, true);
-  assert.match(row.props.label.props.children, /^JSON report · \d+ lines$/);
+  assert.match(labelText(row), /^JSON report · \d+ lines$/);
   assert.match(findOne(tree, "markdown").props.text, /^```json\n\{[\s\S]*\}\n```$/);
 });
 
@@ -294,7 +319,7 @@ test("running and failed /cost render without a body", async () => {
   const running = findOne(render(card({ node: { kind: "command", name: "cost", args: null, outcome: null } })), "disclosure");
   assert.equal(running.props.running, true);
   assert.equal(running.props.expandable, false);
-  assert.equal(running.props.label.props.children, "Running…");
+  assert.equal(labelText(running), "Running…");
 
   const failed = findOne(
     render(card({ node: { kind: "command", name: "cost", args: "verbose", outcome: { kind: "error", text: "Unknown argument. Usage: /cost [summary|full|json]" } } })),
@@ -302,8 +327,8 @@ test("running and failed /cost render without a body", async () => {
   );
   // Short failures read straight off the row; long ones stay expandable.
   assert.equal(failed.props.expandable, true);
-  assert.match(failed.props.label.props.children, /Unknown argument/);
-  assert.equal(failed.props.label.props.style.color, "#d64545");
+  assert.match(labelText(failed), /Unknown argument/);
+  assert.equal(labelStyle(failed).color, "var(--dsw-alias-state-error-primary)");
 });
 
 test("markdown labels are complete; the EN fallback covers a missing locale seat", async () => {
@@ -327,11 +352,11 @@ test("card chrome renders in the app's language through the locale seat", async 
 
   const zh = makeT("zh");
   const running = findOne(render(card({ node: { kind: "command", name: "cost", args: null, outcome: null }, t: zh })), "disclosure");
-  assert.equal(running.props.label.props.children, "运行中…");
+  assert.equal(labelText(running), "运行中…");
 
   const jsonText = '{\n  "totals": {}\n}';
   const jsonCard = render(card({ node: { kind: "command", name: "cost", args: " json ", outcome: { kind: "success", text: jsonText } }, t: zh }));
-  assert.match(findOne(jsonCard, "disclosure").props.label.props.children, /^JSON 报告 · \d+ 行$/);
+  assert.match(labelText(findOne(jsonCard, "disclosure")), /^JSON 报告 · \d+ 行$/);
   assert.equal(findOne(jsonCard, "markdown").props.labels.code.copyLabel, "复制");
   assert.equal(findOne(jsonCard, "markdown").props.labels.code.toolbarLabels.wrapLabel, "自动换行");
 
@@ -339,7 +364,7 @@ test("card chrome renders in the app's language through the locale seat", async 
     render(card({ node: { kind: "command", name: "cost", args: "verbose", outcome: { kind: "error", text: "" } }, t: zh })),
     "disclosure",
   );
-  assert.match(failed.props.label.props.children, /命令执行失败。/);
+  assert.match(labelText(failed), /命令执行失败。/);
 });
 
 test("a settled cost_report tool call renders its content as Markdown", async () => {
@@ -389,7 +414,7 @@ test("a failed cost_report falls back to its error text", async () => {
       block: { kind: "tool-result", content: [], isError: true, error: { name: "CostReportError", message: "boom" }, call: null },
     }),
   );
-  assert.match(findOne(tree, "disclosure").props.label.props.children, /CostReportError: boom/);
+  assert.match(labelText(findOne(tree, "disclosure")), /CostReportError: boom/);
 });
 
 test("a markdown failure degrades to the raw report instead of abdicating the entry", async () => {
